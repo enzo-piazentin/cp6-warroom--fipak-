@@ -159,3 +159,70 @@ O teste `tedDeveCobrarTaxaDe5Reais` falha porque o serviço usa um número mági
 
 **Placar do grupo após esta decisão:** 🔥 7 (-1) · 💰 R$ 90 mil (+30) · 🧹 0 (-1, sem ficar negativo)
 
+---
+
+## 🏁 Perfil final da noite
+
+**Placar final:** 🔥 7 · 💰 R$ 90 mil · 🧹 0
+
+---
+
+## 🔎 O caminho do MEU grupo
+
+| # | Decisão | Nossa letra | Consequência que ELA teria tido |
+|---|---|---|---|
+| 1 | O saldo que virou negativo | C | Sobe 40 min depois, com o `assertThrows` protegendo a invariante: a suíte ganha um teste honesto. 🔥 +1 · 💰 +35 mil · 🧹 −1 |
+| ⚡A | A busca que não acha ninguém | — | Grupo não afetado (só participa quem escolheu D na R1) |
+| 2 | A injeção que derreteu o banco | A | Parâmetros vinculados matam a injeção em ~40 min. Placar inalterado |
+| ⚡B | As conexões que não fecham | A | `try-with-resources` corrige o vazamento em ~30 min. Placar inalterado |
+| 3 | A noite das contas gêmeas | B | "Resolve" a colisão por sorte, quebrando o contrato (sequencial) e deixando extratos ilegíveis para auditoria. 🧹 +1 |
+| 4 | O comprovante que aponta pra pessoa errada | B | Corrige a gravação e reprocessa o histórico (~2h): comprovantes voltam certos. 🔥 +1 · 💰 +25 mil · 🧹 −1 |
+| 5 | A fábrica que devolve null | A | A factory rejeita na hora com mensagem clara: o erro nasce e morre no mesmo lugar. 🔥 −1 |
+| ⚡C | O cadastro com metade dos campos | B | O Builder concentra defaults e validação no `build()`. 🧹 0 |
+| ⚡D | O teste verde que não testa nada | A | 10 minutos e a suíte fica honesta. 🧹 −1 |
+| 6 | O teste vermelho às 03h45 | B | Perde a janela, mas a investigação revela que o código está errado e o contrato diz R$ 5. 🔥 −1 · 💰 +30 mil · 🧹 −1 |
+
+---
+
+# 📋 PÓS-MORTEM · relatório de incidente
+
+## 1. Linha do tempo da madrugada
+
+| Horário | Incidente | Decisão | Placar (🔥 · 💰 · 🧹) |
+|---|---|---|---|
+| início | — | — | 7 · 0 · 2 |
+| 19h12 | O saldo que virou negativo | C: corrigir + `assertThrows` | 8 · 35 mil · 1 |
+| 21h02 | A injeção que derreteu o banco | A: `PreparedStatement` | 8 · 35 mil · 1 |
+| 22h40 | ⚡B As conexões que não fecham | A: `try-with-resources` | 8 · 35 mil · 1 |
+| 22h50 | A noite das contas gêmeas | B: número aleatório/UUID | 8 · 35 mil · 2 |
+| 00h47 | O comprovante que aponta pra pessoa errada | B: corrigir + reprocessar | 9 · 60 mil · 1 |
+| 01h30 | A fábrica que devolve null | A: fail-fast na factory | 8 · 60 mil · 1 |
+| 02h20 | ⚡C O cadastro com metade dos campos | B: Builder com defaults | 8 · 60 mil · 1 |
+| 03h20 | ⚡D O teste verde que não testa nada | A: adicionar o assert | 8 · 60 mil · 0 |
+| 03h45 | O teste vermelho (janela fecha às 04h) | B: investigar e perder a janela | 7 · 90 mil · 0 |
+
+Quase todas as decisões atacaram a causa em vez do sintoma (teste, consulta parametrizada, recursos liberados, fail-fast, reprocessamento), e a dívida técnica caiu de 2 para 0. O preço foi pago em prejuízo (R$ 90 mil) e em reputação. A exceção foi a R3, em que a solução rápida deixou dívida por quebrar o contrato.
+
+## 2. Causa raiz de 2 incidentes (aula + mecanismo técnico)
+
+**Incidente 1:** A injeção que derreteu o banco (21h02)
+
+Aula/mecanismo: Aula 12 (JDBC), **concatenação de SQL**.
+
+A consulta era montada concatenando a entrada do usuário (`"... WHERE titular = '" + nome + "'"`), herança do JDBC puro, mesmo com a derived query `findByTitular` já existindo no repository sem uso. A entrada `' OR '1'='1` virou parte do comando e retornou todas as contas: **SQL Injection**. A correção é a **consulta parametrizada** (`PreparedStatement` com `?`, ou a derived query do Spring Data JPA), que trata a entrada sempre como dado e nunca como comando.
+
+**Incidente 2:** A noite das contas gêmeas (22h50)
+
+Aula/mecanismo: Aula 14 (padrões criacionais), **Singleton implementado errado**.
+
+O `getInstancia()` fazia `return new GeradorNumeroConta()` a cada chamada, então nunca havia uma instância única: o contador recomeçava em 1001 e gerava contas duplicadas, o que viola a regra de número de conta único do contrato. A correção estrutural é tirar a numeração da aplicação e delegá-la ao banco (sequence com restrição `UNIQUE`), que é atômico e persistente.
+
+## 3. O que faríamos diferente (2 rodadas + por quê)
+
+**A noite das contas gêmeas (votamos B, número aleatório/UUID).** Resolveu a colisão "por sorte", mas quebrou a promessa de número sequencial do contrato e deixou os extratos ilegíveis para auditoria (🧹 +1). Faríamos diferente a opção D: delegar a numeração ao banco (sequence), uma migração de ~1h que mantém a sequência e a unicidade garantidas pelo banco, sem pagar a dívida depois.
+
+**A injeção que derreteu o banco (votamos A, `PreparedStatement`).** Fechou a injeção, mas manteve o JDBC puro, que não reduziu a dívida, e foi o código reescrito às pressas que gerou o vazamento de conexões do relâmpago B. Faríamos diferente a opção D: usar a derived query `findByTitular` que o repository já tinha, uma abstração que cuida de parâmetros e conexões e reduz dívida (🧹 −1), ao custo de ~10 min a mais que o A.
+
+## 4. A maior lição da equipe
+
+Corrigir a causa custa mais tempo e dinheiro na hora, mas é o que derruba a dívida técnica. Todo atalho por velocidade (número aleatório no lugar da sequência, JDBC puro reescrito na pressa) cobrou depois, sob a forma de dívida ou de um novo incidente. E um teste vermelho pode estar dizendo a verdade: na R6, o contrato e o teste estavam certos e o código estava errado.
