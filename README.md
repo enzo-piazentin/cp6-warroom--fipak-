@@ -111,3 +111,15 @@ O extrato era gravado com `origem` e `destino` trocados na construção da `Tran
 
 **Placar do grupo após esta decisão:** 🔥 9 (+1) · 💰 R$ 60 mil (+25) · 🧹 1 (-1)
 
+---
+
+## A fábrica que devolve null (01h30)
+
+**Tipo:** ( rodada ) · **Voto:** ( A )
+
+**Justificativa:**
+
+O `default -> null` da `ContaFactory` deixava o erro estourar longe da causa (`Entity must not be null` no `save()`). Fail-fast, com exceção clara na própria factory ("Tipo de conta inválido: UNIVERSITARIA"), faz o erro nascer e morrer no mesmo lugar (Aulas 11 e 14), vale para qualquer chamador e não deixa validação espalhada. O trade-off é aceitar o custo de reputação (🔥 −1), porque a Universitária continua indisponível, mas sem dívida nova e sem contas criadas com o tipo errado.
+
+**Placar do grupo após esta decisão:** 🔥 8 (-1) · 💰 R$ 60 mil (0) · 🧹 1 (0)
+
