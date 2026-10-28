@@ -123,3 +123,39 @@ O `default -> null` da `ContaFactory` deixava o erro estourar longe da causa (`E
 
 **Placar do grupo após esta decisão:** 🔥 8 (-1) · 💰 R$ 60 mil (0) · 🧹 1 (0)
 
+---
+
+## ⚡ O cadastro com metade dos campos (02h20) · Relâmpago C
+
+**Tipo:** ( relâmpago ) · **Voto:** ( B )
+
+**Justificativa:**
+
+O padrão Builder (criacional, Aula 14) com valores padrão concentra defaults e validação no `build()`, deixando claro o que é obrigatório e evitando o "construtor telescópico", que cresce a cada combinação de campos. Aceitar `null` (C) espalharia `NullPointerException` pelo sistema. O trade-off é escrever uma classe Builder agora, em vez de um construtor extra rápido, em troca de manutenção sem dívida (🧹 0).
+
+**Placar do grupo após esta decisão:** 🔥 8 (0) · 💰 R$ 60 mil (0) · 🧹 1 (0)
+
+---
+
+## ⚡ O teste verde que não testa nada (03h20) · Relâmpago D
+
+**Tipo:** ( relâmpago ) · **Voto:** ( A )
+
+**Justificativa:**
+
+O teste do depósito roda e fica verde, mas não tem nenhum `assert`, então não verifica nada e dá falsa segurança (Aula 15). Adicionar o `assertEquals` com o saldo esperado transforma o teste em uma verificação real do comportamento. O trade-off são ~10 minutos de trabalho, contra o risco de o depósito quebrar sem ninguém perceber (B) ou perder cobertura apagando o teste (C).
+
+**Placar do grupo após esta decisão:** 🔥 8 (0) · 💰 R$ 60 mil (0) · 🧹 0 (-1)
+
+---
+
+## O teste vermelho às 03h45 (a janela fecha às 04h)
+
+**Tipo:** ( rodada ) · **Voto:** ( B )
+
+**Justificativa:**
+
+O teste `tedDeveCobrarTaxaDe5Reais` falha porque o serviço usa um número mágico `50.00`, e o contrato fixa a TED em R$ 5,00: o teste está certo e o código errado. Desabilitar, ignorar o vermelho ou ajustar o teste para 50.0 (A, C, D) subiria o bug no ar, cobrando 10x a taxa na Black Friday e quebrando a regra "verde é pré-requisito pra subir". O trade-off é perder a janela de deploy (🔥 −1, 💰 +30 mil), aceito para preservar o contrato e a confiança na suíte (🧹 −1).
+
+**Placar do grupo após esta decisão:** 🔥 7 (-1) · 💰 R$ 90 mil (+30) · 🧹 0 (-1, sem ficar negativo)
+
