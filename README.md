@@ -99,3 +99,15 @@ O `getInstancia()` do Singleton devolvia sempre `new GeradorNumeroConta()`, ent�
 
 **Placar do grupo após esta decisão:** 🔥 8 (0) · 💰 R$ 35 mil (0) · 🧹 2 (+1)
 
+---
+
+## O comprovante que aponta pra pessoa errada (00h47)
+
+**Tipo:** ( rodada ) · **Voto:** ( B )
+
+**Justificativa:**
+
+O extrato era gravado com `origem` e `destino` trocados na construção da `Transferencia` (os saldos estavam certos, só o registro estava invertido). Corrigir apenas a gravação (A) deixaria o histórico errado, e o contrato prevê que o extrato registra "quem pagou e quem recebeu, na ordem certa", o que interessa a clientes e reguladores. Corrigir e reprocessar os extratos antigos devolve a integridade total e reduz a dívida de dados (🧹 −1), ao custo de ~2h de trabalho (💰 +25 mil).
+
+**Placar do grupo após esta decisão:** 🔥 9 (+1) · 💰 R$ 60 mil (+25) · 🧹 1 (-1)
+
